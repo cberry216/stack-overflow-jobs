@@ -1,7 +1,0 @@
-# VS Code
-.dist
-.vscode
-
-# Python
-**__pycache__
-**.pytest_cache
