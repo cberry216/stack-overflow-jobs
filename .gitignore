@@ -1,2 +1,12 @@
+# Python
 .pytest_cache
 **/__pycache__
+
+# VS Code
+.vscode
+.dist
+
+# Databases
+**/*.sqlite
+**/*.sqlite3
+**/*.db
