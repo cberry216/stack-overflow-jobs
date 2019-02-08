@@ -7,6 +7,6 @@
 .dist
 
 # Databases
-**/*.sqlite
+**/*.sqlite*
 **/*.sqlite3
 **/*.db
