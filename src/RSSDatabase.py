@@ -25,7 +25,10 @@ class RSSDatabase:
                 raise InvalidParserException(parser, 'Something is wrong with your parser.')
 
             if self._is_valid_db(db):
-                self.db = db
+                if not self._db_taken(db):
+                    self.db = db
+                else:
+                    raise DatabaseAlreadyExistsException(db, 'The database name is already taken.')
             else:
                 raise InvalidDatabaseException(db, 'Something is wrong with your database name: ' + str(db))
         else:
@@ -68,8 +71,6 @@ class RSSDatabase:
         if db is None:
             return False
         else:
-            if os.path.isfile(db):
-                raise DatabaseAlreadyExistsException(db, 'The provided database name is already taken.')
             db_split = db.split('.')
             if len(db_split) < 2:
                 return False
@@ -78,6 +79,21 @@ class RSSDatabase:
                 return True
             else:
                 return False
+
+    def _db_taken(self, db):
+        """
+        Determines whether the provided database name is already taken
+
+        Args:
+            db (str): String to test if it exists
+
+        Returns:
+            bool: True if db doesn't already exist, false otherwise
+        """
+
+        if os.path.isfile(db):
+            return True
+        return False
 
     def create_database(self):
         """ Sets up database connection and cursor, and adds the 'entry' table """

@@ -96,6 +96,24 @@ def test__is_valid_db():
     assert not db._is_valid_db(db.db)
 
 
+def test__db_taken():
+    import RSSDatabase as rssd
+    import RSSParser as rssp
+    import os
+    from exceptions import DatabaseAlreadyExistsException
+
+    parser = rssp.RSSParser('https://stackoverflow.com/jobs/feed')
+    db_name = 'test_db.sqlite'
+    db = rssd.RSSDatabase(parser=parser, db=db_name)
+    db.create_database()
+
+    with pytest.raises(DatabaseAlreadyExistsException):
+        db2 = rssd.RSSDatabase(parser=parser, db=db_name)
+
+    if os.path.isfile(db_name):
+        os.remove(db_name)
+
+
 def test_rss_database():
     import RSSDatabase as rssd
     import RSSParser as rssp
@@ -412,7 +430,11 @@ def test_disconnect_database():
     test_cursor.execute('INSERT INTO test (id, name) VALUES (1, "a");')
 
     db.disconnect_database(commit=False)
+
     db.connect_database(db_name)
+
+    # test_cursor = db.cursor
+    # test_cursor.execute('CREATE TABLE test (id INTEGER PRIMARY KEY, name VARCHAR(10) NOT NULL);')
 
     test_cursor = db.cursor
     test_cursor.execute('SELECT COUNT(*) FROM test;')
