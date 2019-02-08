@@ -1,11 +1,23 @@
 import sqlite3
-from exceptions import InvalidParserException, InvalidDatabaseException
+import os
+from exceptions import InvalidParserException, InvalidDatabaseException, DatabaseAlreadyExistsException
 from dateutil import parser
 from functools import reduce
 
 
 class RSSDatabase:
     def __init__(self, parser=None, db=None, _debug=False):
+        """
+        Constructor for RSSDatabase class
+            parser (RSSParser.RSSParser, optional): Defaults to None. parser to read job entries from
+            db (str, optional): Defaults to None. Database name to use
+            _debug (bool, optional): Defaults to False. Used exclusively for testing.
+
+        Raises:
+            InvalidParserException: if the parser is not of the right type and _debug is set to false
+            InvalidDatabaseException: if the database name is incorrect and _debug is set to false
+        """
+
         if not _debug:
             if self._is_valid_parser(parser):
                 self.parser = parser
@@ -24,15 +36,40 @@ class RSSDatabase:
         self.cursor = None
 
     def _is_valid_parser(self, parser):
+        """
+        Determines whether the provided parser is valid
+
+        Args:
+            parser (RSSParser.RSSParser): parser to test validity
+
+        Returns:
+            bool: True if parser is valid, false otherwise
+        """
+
         if parser is None:
             return False
         else:
             return parser.is_valid_parser()
 
     def _is_valid_db(self, db):
+        """
+        Determines whether the provided database name is valid
+
+        Args:
+            db (str): string to test validity of
+
+        Raises:
+            DatabaseAlreadyExistsException: If the provided name already exists in the file system
+
+        Returns:
+            bool: True if db has valid name, false otherwise
+        """
+
         if db is None:
             return False
         else:
+            if os.path.isfile(db):
+                raise DatabaseAlreadyExistsException(db, 'The provided database name is already taken.')
             db_split = db.split('.')
             if len(db_split) < 2:
                 return False
@@ -63,6 +100,8 @@ class RSSDatabase:
         self.connection.commit()
 
     def populate_database(self):
+        """ Populates the database with the entries from the provided parser. """
+
         try:
             entry = self.parser.entry()
             while True:
@@ -72,6 +111,12 @@ class RSSDatabase:
             self.connection.commit()
 
     def process_entry(self, entry):
+        """
+        Add an entry dictionary to a SQLite database
+
+        Args:
+            entry (dict): Dictionary containing information on job entry
+        """
         entry_id = entry['id']
         entry_title = entry['title']
         entry_company = entry['author']
@@ -96,6 +141,16 @@ class RSSDatabase:
             (entry_id, entry_title, entry_company, entry_summary, entry_link, entry_tags, entry_location, entry_published))
 
     def connect_database(self, db):
+        """
+        Connects to a database with the given name
+
+        Args:
+            db (str): database name to connect to
+
+        Raises:
+            InvalidDatabaseException: If db has an invalid name
+        """
+
         if self._is_valid_db(db):
             self.db = db
             self.connection = sqlite3.connect(db)
@@ -104,6 +159,13 @@ class RSSDatabase:
             raise InvalidDatabaseException(db, 'Something is wrong with your database name: ' + str(db))
 
     def disconnect_database(self, commit=True):
+        """
+        Disconnects from a database and may commit changes.
+
+        Args:
+            commit (bool, optional): Defaults to True. If true, commits all changes, else changes are ignore
+        """
+
         if commit:
             self.connection.commit()
             self.connection.close()
