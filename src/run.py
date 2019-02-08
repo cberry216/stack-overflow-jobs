@@ -12,11 +12,15 @@ def main():
 
     stackoverflow_rss_feed_url = 'https://stackoverflow.com/jobs/feed'
 
+    print('Generating parser...')
     rss_parser = rssp.RSSParser(stackoverflow_rss_feed_url)
     rss_database = rssd.RSSDatabase(parser=rss_parser, db=db_name)
 
+    print('Creating Database...')
     rss_database.create_database()
+    print('Populating Database...')
     rss_database.populate_database()
+    print('Disconnecting Database...')
     rss_database.disconnect_database(commit=True)
 
 
