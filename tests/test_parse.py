@@ -16,7 +16,6 @@ def test_parse_rss_feed():
     url = 'https://stackoverflow.com/jobs/feed'
     parser = rssp.RSSParser(url)                  # parse_rss_feed() is automatically called when an RSSParser is initialized
 
-    assert parser.count > 0
     assert parser.feed.status == 200
     assert 'bozo_exception' not in parser.keys
     assert type(parser.entries) == type([])

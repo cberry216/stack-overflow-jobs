@@ -13,7 +13,6 @@ class RSSParser:
 
         self.url = url
         self.feed, self.keys, self.entries = self.parse_rss_feed()
-        self.count = len(self.entries)
 
     def parse_rss_feed(self):
         """
