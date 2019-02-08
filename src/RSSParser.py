@@ -44,8 +44,8 @@ class RSSParser:
     def entry(self):
         """Generator function that returns the next entry."""
 
-        for i in range(self.count):
-            yield self.entries[i]
+        for entry in self.entries:
+            yield entry
 
     def _dev_set_entries(self, entries):
         """

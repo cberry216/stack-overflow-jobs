@@ -69,26 +69,35 @@ class RSSDatabase:
                 current_entry = next(entry)
                 self.process_entry(current_entry)
         except StopIteration:
-            pass
+            self.connection.commit()
 
     def process_entry(self, entry):
-        entry_id = entry.id
-        entry_title = entry.title
-        entry_company = entry.author
-        entry_summary = entry.summary
-        entry_link = entry.link
+        entry_id = entry['id']
+        entry_title = entry['title']
+        entry_company = entry['author']
+        entry_summary = entry['summary']
+        entry_link = entry['link']
 
         if 'tags' in entry:
-            entry_tags = reduce(lambda x, y: x + y.term, entry.tags, '')
+            entry_tags = reduce(lambda x, y: x + y['term'] + ',', entry['tags'], '')
         else:
             entry_tags = None
         if 'location' in entry:
-            entry_location = entry.location
+            entry_location = entry['location']
         else:
-            entry_location = None
+            entry_location = 'Remote'
+
+        entry_datetime = parser.parse(entry['published'])
+        entry_published = 'DATETIME(%s-%s-%s %s:%s:%s)' % (entry_datetime.year, entry_datetime.month,
+                                                           entry_datetime.day, entry_datetime.hour, entry_datetime.minute, entry_datetime.second)
+
+        self.cursor.execute(
+            """INSERT INTO entry (id, title, company, summary, link, tags, location, published) VALUES (?,?,?,?,?,?,?,?)""",
+            (entry_id, entry_title, entry_company, entry_summary, entry_link, entry_tags, entry_location, entry_published))
 
     def connect_database(self, db):
         if self._is_valid_db(db):
+            self.db = db
             self.connection = sqlite3.connect(db)
             self.cursor = self.connection.cursor()
         else:

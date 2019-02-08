@@ -204,7 +204,7 @@ def test_populate_database():
 
     parser._dev_set_entries(entries)
 
-    db_name = 'entries.sqlite'
+    db_name = 'test_db.sqlite'
     db = rssd.RSSDatabase(parser=parser, db=db_name)
     db.create_database()
 
@@ -217,7 +217,7 @@ def test_populate_database():
     assert test_results[2] == 'company 1'
     assert test_results[3] == 'summary 1'
     assert test_results[4] == 'link 1'
-    assert test_results[5] == 'term1-1,term1-2,term1-3'
+    assert test_results[5] == 'term1-1,term1-2,term1-3,'
     assert test_results[6] == 'location 1'
 
     test_cursor = db.cursor.execute('SELECT * FROM entry WHERE id = 2')
@@ -227,7 +227,7 @@ def test_populate_database():
     assert test_results[2] == 'company 2'
     assert test_results[3] == 'summary 2'
     assert test_results[4] == 'link 2'
-    assert test_results[5] == 'term2-1,term2-2,term2-3'
+    assert test_results[5] == None
     assert test_results[6] == 'location 2'
 
     test_cursor = db.cursor.execute('SELECT * FROM entry WHERE id = 3')
@@ -237,8 +237,8 @@ def test_populate_database():
     assert test_results[2] == 'company 3'
     assert test_results[3] == 'summary 3'
     assert test_results[4] == 'link 3'
-    assert test_results[5] == 'term3-1,term3-2,term3-3'
-    assert test_results[6] == 'location 3'
+    assert test_results[5] == 'term3-1,term3-2,term3-3,'
+    assert test_results[6] == 'Remote'
 
     test_cursor = db.cursor.execute('SELECT * FROM entry WHERE id = 4')
     test_results = test_cursor.fetchone()
@@ -247,8 +247,8 @@ def test_populate_database():
     assert test_results[2] == 'company 4'
     assert test_results[3] == 'summary 4'
     assert test_results[4] == 'link 4'
-    assert test_results[5] == 'term4-1,term4-2,term4-3'
-    assert test_results[6] == 'location 4'
+    assert test_results[5] == None
+    assert test_results[6] == 'Remote'
 
     # TODO: test dates
 
@@ -264,8 +264,9 @@ def test_process_entry():
     db_name = 'test_db.sqlite'
     db = rssd.RSSDatabase(_debug=True)
     db.connect_database(db_name)
+    db.create_database()
     test_connection = db.connection
-    test_cursor = db.cursor()
+    test_cursor = db.cursor
 
     entry1 = {   # Both tags and location present
         'id': 1,
@@ -317,6 +318,7 @@ def test_process_entry():
     }
 
     db.process_entry(entry1)
+    db.connection.commit()
     test_cursor = db.cursor.execute('SELECT * FROM entry WHERE id = 1')
     test_results = test_cursor.fetchone()
     assert test_results[0] == 1
@@ -324,10 +326,11 @@ def test_process_entry():
     assert test_results[2] == 'company 1'
     assert test_results[3] == 'summary 1'
     assert test_results[4] == 'link 1'
-    assert test_results[5] == 'term1-1,term1-2,term1-3'
+    assert test_results[5] == 'term1-1,term1-2,term1-3,'
     assert test_results[6] == 'location 1'
 
     db.process_entry(entry2)
+    db.connection.commit()
     test_cursor = db.cursor.execute('SELECT * FROM entry WHERE id = 2')
     test_results = test_cursor.fetchone()
     assert test_results[0] == 2
@@ -335,10 +338,11 @@ def test_process_entry():
     assert test_results[2] == 'company 2'
     assert test_results[3] == 'summary 2'
     assert test_results[4] == 'link 2'
-    assert test_results[5] == 'term2-1,term2-2,term2-3'
+    assert test_results[5] == None
     assert test_results[6] == 'location 2'
 
     db.process_entry(entry3)
+    db.connection.commit()
     test_cursor = db.cursor.execute('SELECT * FROM entry WHERE id = 3')
     test_results = test_cursor.fetchone()
     assert test_results[0] == 3
@@ -346,10 +350,11 @@ def test_process_entry():
     assert test_results[2] == 'company 3'
     assert test_results[3] == 'summary 3'
     assert test_results[4] == 'link 3'
-    assert test_results[5] == 'term3-1,term3-2,term3-3'
-    assert test_results[6] == 'location 3'
+    assert test_results[5] == 'term3-1,term3-2,term3-3,'
+    assert test_results[6] == 'Remote'
 
     db.process_entry(entry4)
+    db.connection.commit()
     test_cursor = db.cursor.execute('SELECT * FROM entry WHERE id = 4')
     test_results = test_cursor.fetchone()
     assert test_results[0] == 4
@@ -357,8 +362,8 @@ def test_process_entry():
     assert test_results[2] == 'company 4'
     assert test_results[3] == 'summary 4'
     assert test_results[4] == 'link 4'
-    assert test_results[5] == 'term4-1,term4-2,term4-3'
-    assert test_results[6] == 'location 4'
+    assert test_results[5] == None
+    assert test_results[6] == 'Remote'
 
     # TODO: Test dates
 

@@ -1,3 +1,4 @@
+import pytest
 import sys
 sys.path.append('src')
 
@@ -85,3 +86,6 @@ def test_entry():
     assert next_entry == {'id': 500, 'author': 'nop', 'title': 'ugh job'}
     next_entry = next(entry)
     assert next_entry == {'id': 600, 'author': 'qrs', 'title': 'your job'}
+
+    with pytest.raises(StopIteration):
+        next_entry = next(entry)
