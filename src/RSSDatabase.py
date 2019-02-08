@@ -57,7 +57,7 @@ class RSSDatabase:
                 tags TEXT,
                 location VARCHAR(256),
                 published DATETIME NOT NULL,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
         """)
         self.connection.commit()
