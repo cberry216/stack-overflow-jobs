@@ -136,7 +136,7 @@ def test_create_database():
 
     test_cursor = db.cursor.execute('SELECT name FROM sqlite_master WHERE type = "table"')
     results = test_cursor.fetchall()
-    assert len(results) == 2  # entry table + auto increment table from sqlite
+    assert len(results) == 1  # entry table
     assert results[0][0] == 'entry'
 
     os.remove(db_name)
@@ -207,6 +207,7 @@ def test_populate_database():
     db_name = 'entries.sqlite'
     db = rssd.RSSDatabase(parser=parser, db=db_name)
     db.create_database()
+
     db.populate_database()
 
     test_cursor = db.cursor.execute('SELECT * FROM entry WHERE id = 1')
@@ -218,16 +219,212 @@ def test_populate_database():
     assert test_results[4] == 'link 1'
     assert test_results[5] == 'term1-1,term1-2,term1-3'
     assert test_results[6] == 'location 1'
-    assert test_results[7] == ''                            # Published
-    assert test_results[8] == ''                            # Updated
-    assert test_results[9] == ''                            # Timestamp
 
-    assert False
+    test_cursor = db.cursor.execute('SELECT * FROM entry WHERE id = 2')
+    test_results = test_cursor.fetchone()
+    assert test_results[0] == 2
+    assert test_results[1] == 'job 2'
+    assert test_results[2] == 'company 2'
+    assert test_results[3] == 'summary 2'
+    assert test_results[4] == 'link 2'
+    assert test_results[5] == 'term2-1,term2-2,term2-3'
+    assert test_results[6] == 'location 2'
+
+    test_cursor = db.cursor.execute('SELECT * FROM entry WHERE id = 3')
+    test_results = test_cursor.fetchone()
+    assert test_results[0] == 3
+    assert test_results[1] == 'job 3'
+    assert test_results[2] == 'company 3'
+    assert test_results[3] == 'summary 3'
+    assert test_results[4] == 'link 3'
+    assert test_results[5] == 'term3-1,term3-2,term3-3'
+    assert test_results[6] == 'location 3'
+
+    test_cursor = db.cursor.execute('SELECT * FROM entry WHERE id = 4')
+    test_results = test_cursor.fetchone()
+    assert test_results[0] == 4
+    assert test_results[1] == 'job 4'
+    assert test_results[2] == 'company 4'
+    assert test_results[3] == 'summary 4'
+    assert test_results[4] == 'link 4'
+    assert test_results[5] == 'term4-1,term4-2,term4-3'
+    assert test_results[6] == 'location 4'
+
+    # TODO: test dates
+
+    if os.path.isfile(db_name):
+        os.remove(db_name)
+
+
+def test_process_entry():
+    import RSSDatabase as rssd
+    import sqlite3
+    import os
+
+    db_name = 'test_db.sqlite'
+    db = rssd.RSSDatabase(_debug=True)
+    db.connect_database(db_name)
+    test_connection = db.connection
+    test_cursor = db.cursor()
+
+    entry1 = {   # Both tags and location present
+        'id': 1,
+        'title': 'job 1',
+        'author': 'company 1',
+        'summary': 'summary 1',
+        'link': 'link 1',
+        'tags': [
+                {'term': 'term1-1'},
+                {'term': 'term1-2'},
+                {'term': 'term1-3'}
+        ],
+        'location': 'location 1',
+        'published': 'Wed, 06 Feb 2019 12:36:40 Z',
+        'updated': '2019-02-06T12:36:40Z'
+    }
+    entry2 = {   # Location present, tags absent
+        'id': 2,
+        'title': 'job 2',
+        'author': 'company 2',
+        'summary': 'summary 2',
+        'link': 'link 2',
+        'location': 'location 2',
+        'published': 'Wed, 06 Feb 2019 12:36:40 Z',
+        'updated': '2019-02-06T12:36:40Z'
+    }
+    entry3 = {   # Tags present, location absent
+        'id': 3,
+        'title': 'job 3',
+        'author': 'company 3',
+        'summary': 'summary 3',
+        'link': 'link 3',
+        'tags': [
+                {'term': 'term3-1'},
+                {'term': 'term3-2'},
+                {'term': 'term3-3'}
+        ],
+        'published': 'Wed, 06 Feb 2019 12:36:40 Z',
+        'updated': '2019-02-06T12:36:40Z'
+    }
+    entry4 = {   # Both tags and location absent
+        'id': 4,
+        'title': 'job 4',
+        'author': 'company 4',
+        'summary': 'summary 4',
+        'link': 'link 4',
+        'published': 'Wed, 06 Feb 2019 12:36:40 Z',
+        'updated': '2019-02-06T12:36:40Z'
+    }
+
+    db.process_entry(entry1)
+    test_cursor = db.cursor.execute('SELECT * FROM entry WHERE id = 1')
+    test_results = test_cursor.fetchone()
+    assert test_results[0] == 1
+    assert test_results[1] == 'job 1'
+    assert test_results[2] == 'company 1'
+    assert test_results[3] == 'summary 1'
+    assert test_results[4] == 'link 1'
+    assert test_results[5] == 'term1-1,term1-2,term1-3'
+    assert test_results[6] == 'location 1'
+
+    db.process_entry(entry2)
+    test_cursor = db.cursor.execute('SELECT * FROM entry WHERE id = 2')
+    test_results = test_cursor.fetchone()
+    assert test_results[0] == 2
+    assert test_results[1] == 'job 2'
+    assert test_results[2] == 'company 2'
+    assert test_results[3] == 'summary 2'
+    assert test_results[4] == 'link 2'
+    assert test_results[5] == 'term2-1,term2-2,term2-3'
+    assert test_results[6] == 'location 2'
+
+    db.process_entry(entry3)
+    test_cursor = db.cursor.execute('SELECT * FROM entry WHERE id = 3')
+    test_results = test_cursor.fetchone()
+    assert test_results[0] == 3
+    assert test_results[1] == 'job 3'
+    assert test_results[2] == 'company 3'
+    assert test_results[3] == 'summary 3'
+    assert test_results[4] == 'link 3'
+    assert test_results[5] == 'term3-1,term3-2,term3-3'
+    assert test_results[6] == 'location 3'
+
+    db.process_entry(entry4)
+    test_cursor = db.cursor.execute('SELECT * FROM entry WHERE id = 4')
+    test_results = test_cursor.fetchone()
+    assert test_results[0] == 4
+    assert test_results[1] == 'job 4'
+    assert test_results[2] == 'company 4'
+    assert test_results[3] == 'summary 4'
+    assert test_results[4] == 'link 4'
+    assert test_results[5] == 'term4-1,term4-2,term4-3'
+    assert test_results[6] == 'location 4'
+
+    # TODO: Test dates
+
+    if os.path.isfile(db_name):
+        os.remove(db_name)
+
+
+def test_connect_database():
+    import RSSDatabase as rssd
+    from exceptions import InvalidDatabaseException
+    import os
+
+    db_name = 'test_db.sqlite'
+    db = rssd.RSSDatabase(_debug=True)
+    db.connect_database(db_name)
+
+    test_connection = db.connection
+    test_cursor = db.cursor
+    test_cursor.execute('CREATE TABLE test (id INTEGER PRIMARY KEY, name VARCHAR(10) NOT NULL);')
+    test_connection.commit()
+
+    test_cursor.execute('SELECT name FROM sqlite_master WHERE type = "table"')
+    tables = test_cursor.fetchall()
+    assert len(tables) == 1
+    assert tables[0][0] == 'test'
+
+    with pytest.raises(InvalidDatabaseException):
+        db.connect_database('wont_work')
+
+    if os.path.isfile(db_name):
+        os.remove(db_name)
 
 
 def test_disconnect_database():
-    assert False
+    import RSSDatabase as rssd
+    from exceptions import InvalidDatabaseException
+    import os
 
+    db_name = 'test_db.sqlite'
+    db = rssd.RSSDatabase(_debug=True)
+    db.connect_database(db_name)
 
-def test_delete_database():
-    assert False
+    test_cursor = db.cursor
+    test_cursor.execute('CREATE TABLE test (id INTEGER PRIMARY KEY, name VARCHAR(10) NOT NULL);')
+
+    test_cursor.execute('INSERT INTO test (id, name) VALUES (1, "a");')
+
+    db.disconnect_database(commit=False)
+    db.connect_database(db_name)
+
+    test_cursor = db.cursor
+    test_cursor.execute('SELECT COUNT(*) FROM test;')
+    count = test_cursor.fetchall()
+    assert len(count) == 1
+    assert count[0][0] == 0
+
+    test_cursor.execute('INSERT INTO test (id, name) VALUES (1, "a");')
+
+    db.disconnect_database(commit=True)
+    db.connect_database(db_name)
+
+    test_cursor = db.cursor
+    test_cursor.execute('SELECT COUNT(*) FROM test;')
+    count = test_cursor.fetchall()
+    assert len(count) == 1
+    assert count[0][0] == 1
+
+    if os.path.isfile(db_name):
+        os.remove(db_name)

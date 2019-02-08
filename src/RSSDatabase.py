@@ -1,5 +1,7 @@
 import sqlite3
 from exceptions import InvalidParserException, InvalidDatabaseException
+from dateutil import parser
+from functools import reduce
 
 
 class RSSDatabase:
@@ -13,7 +15,7 @@ class RSSDatabase:
             if self._is_valid_db(db):
                 self.db = db
             else:
-                raise InvalidDatabaseException(db, 'Something is wrong with your database name.')
+                raise InvalidDatabaseException(db, 'Something is wrong with your database name: ' + str(db))
         else:
             self.parser = None
             self.db = None
@@ -47,7 +49,7 @@ class RSSDatabase:
         self.cursor = self.connection.cursor()
         self.cursor.execute("""
             CREATE TABLE entry (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id INTEGER PRIMARY KEY,
                 title VARCHAR(256) NOT NULL,
                 company VARCHAR(256) NOT NULL,
                 summary TEXT NOT NULL,
@@ -55,20 +57,49 @@ class RSSDatabase:
                 tags TEXT,
                 location VARCHAR(256),
                 published DATETIME NOT NULL,
-                updated DATETIME NOT NULL,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """)
         self.connection.commit()
 
     def populate_database(self):
-        pass
+        try:
+            entry = self.parser.entry()
+            while True:
+                current_entry = next(entry)
+                self.process_entry(current_entry)
+        except StopIteration:
+            pass
+
+    def process_entry(self, entry):
+        entry_id = entry.id
+        entry_title = entry.title
+        entry_company = entry.author
+        entry_summary = entry.summary
+        entry_link = entry.link
+
+        if 'tags' in entry:
+            entry_tags = reduce(lambda x, y: x + y.term, entry.tags, '')
+        else:
+            entry_tags = None
+        if 'location' in entry:
+            entry_location = entry.location
+        else:
+            entry_location = None
+
+    def connect_database(self, db):
+        if self._is_valid_db(db):
+            self.connection = sqlite3.connect(db)
+            self.cursor = self.connection.cursor()
+        else:
+            raise InvalidDatabaseException(db, 'Something is wrong with your database name: ' + str(db))
 
     def disconnect_database(self, commit=True):
-        pass
-
-    def delete_database(self, commit=True):
-        pass
+        if commit:
+            self.connection.commit()
+            self.connection.close()
+        else:
+            self.connection.close()
 
     def _dev_set_parser(self, parser):
         self.parser = parser
