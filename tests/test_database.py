@@ -109,6 +109,7 @@ def test__db_taken():
 
     with pytest.raises(DatabaseAlreadyExistsException):
         db2 = rssd.RSSDatabase(parser=parser, db=db_name)
+    db.disconnect_database()
 
     if os.path.isfile(db_name):
         os.remove(db_name)
@@ -156,6 +157,8 @@ def test_create_database():
     results = test_cursor.fetchall()
     assert len(results) == 1  # entry table
     assert results[0][0] == 'entry'
+
+    db.disconnect_database()
 
     os.remove(db_name)
     assert not os.path.isfile(db_name)
@@ -269,6 +272,8 @@ def test_populate_database():
     assert test_results[6] == 'Remote'
 
     # TODO: test dates
+
+    db.disconnect_database()
 
     if os.path.isfile(db_name):
         os.remove(db_name)
@@ -385,6 +390,8 @@ def test_process_entry():
 
     # TODO: Test dates
 
+    db.disconnect_database()
+
     if os.path.isfile(db_name):
         os.remove(db_name)
 
@@ -410,6 +417,8 @@ def test_connect_database():
 
     with pytest.raises(InvalidDatabaseException):
         db.connect_database('wont_work')
+
+    db.disconnect_database()
 
     if os.path.isfile(db_name):
         os.remove(db_name)
@@ -452,6 +461,8 @@ def test_disconnect_database():
     count = test_cursor.fetchall()
     assert len(count) == 1
     assert count[0][0] == 1
+
+    db.disconnect_database()
 
     if os.path.isfile(db_name):
         os.remove(db_name)
