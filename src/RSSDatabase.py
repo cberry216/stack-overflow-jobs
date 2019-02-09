@@ -148,9 +148,9 @@ class RSSDatabase:
         else:
             entry_location = 'Remote'
 
-        entry_datetime = parser.parse(entry['published'])
-        entry_published = 'DATETIME(%s-%s-%s %s:%s:%s)' % (entry_datetime.year, entry_datetime.month,
-                                                           entry_datetime.day, entry_datetime.hour, entry_datetime.minute, entry_datetime.second)
+        entry_published = parser.parse(entry['published'])
+        # entry_published = 'DATETIME(%s-%s-%s %s:%s:%s)' % (entry_datetime.year, entry_datetime.month,
+        #                                                    entry_datetime.day, entry_datetime.hour, entry_datetime.minute, entry_datetime.second)
 
         self.cursor.execute(
             """INSERT INTO entry (id, title, company, summary, link, tags, location, published) VALUES (?,?,?,?,?,?,?,?)""",
