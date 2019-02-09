@@ -1,5 +1,6 @@
 import RSSParser as rssp
 import RSSDatabase as rssd
+from exceptions import InvalidParserException, InvalidDatabaseException, DatabaseAlreadyExistsException
 import sys
 
 
@@ -14,7 +15,17 @@ def main():
 
     print('Generating parser...')
     rss_parser = rssp.RSSParser(stackoverflow_rss_feed_url)
-    rss_database = rssd.RSSDatabase(parser=rss_parser, db=db_name)
+    try:
+        rss_database = rssd.RSSDatabase(parser=rss_parser, db=db_name)
+    except InvalidParserException as e:
+        print(str(e))
+        sys.exit(1)
+    except InvalidDatabaseException as e:
+        print(str(e))
+        sys.exit(1)
+    except DatabaseAlreadyExistsException as e:
+        print(str(e))
+        sys.exit(1)
 
     print('Creating Database...')
     rss_database.create_database()
