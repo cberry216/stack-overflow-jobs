@@ -374,8 +374,6 @@ def test_process_entry():
     assert test_results[6] == None
     assert test_results[7] == 0
 
-    # TODO: Test dates
-
     db.disconnect_database()
 
     if os.path.isfile(db_name):
@@ -419,9 +417,6 @@ def test_disconnect_database():
     db.disconnect_database(commit=False)
 
     db.connect_database(db_name)
-
-    # test_cursor = db.cursor
-    # test_cursor.execute('CREATE TABLE test (id INTEGER PRIMARY KEY, name VARCHAR(10) NOT NULL);')
 
     test_cursor = db.cursor
     test_cursor.execute('SELECT COUNT(*) FROM test;')
