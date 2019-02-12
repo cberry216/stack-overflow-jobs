@@ -1,5 +1,6 @@
 import sqlite3
 import os
+import RSSParser as rssp
 from exceptions import InvalidParserException, InvalidDatabaseException, DatabaseAlreadyExistsException
 from dateutil import parser
 from functools import reduce
@@ -43,13 +44,13 @@ class RSSDatabase:
         Determines whether the provided parser is valid
 
         Args:
-            parser (RSSParser.RSSParser): parser to test validity
+            parser (object): parser to test validity
 
         Returns:
             bool: True if parser is valid, false otherwise
         """
 
-        if parser is None:
+        if type(parser) is not rssp.RSSParser:
             return False
         else:
             return parser.is_valid_parser()
@@ -60,9 +61,6 @@ class RSSDatabase:
 
         Args:
             db (str): string to test validity of
-
-        Raises:
-            DatabaseAlreadyExistsException: If the provided name already exists in the file system
 
         Returns:
             bool: True if db has valid name, false otherwise
@@ -109,6 +107,7 @@ class RSSDatabase:
                 link TEXT NOT NULL,
                 tags TEXT,
                 location VARCHAR(256),
+                allows_remote INT NOT NULL,
                 published DATETIME NOT NULL,
                 timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
@@ -124,11 +123,12 @@ class RSSDatabase:
                 current_entry = next(entry)
                 self.process_entry(current_entry)
         except StopIteration:
+            # only commit once all entries are processed
             self.connection.commit()
 
     def process_entry(self, entry):
         """
-        Add an entry dictionary to a SQLite database
+        Add an entry dictionary to the SQLite database
 
         Args:
             entry (dict): Dictionary containing information on job entry
@@ -140,21 +140,32 @@ class RSSDatabase:
         entry_link = entry['link']
 
         if 'tags' in entry:
+            # convert dict of terms to comma-seperated string of terms
             entry_tags = reduce(lambda x, y: x + y['term'] + ',', entry['tags'], '')
         else:
             entry_tags = None
         if 'location' in entry:
             entry_location = entry['location']
         else:
-            entry_location = 'Remote'
+            entry_location = None
+
+        entry_allows_remote = 1 if self.title_has_remote_option(entry_title) else 0
 
         entry_published = parser.parse(entry['published'])
-        # entry_published = 'DATETIME(%s-%s-%s %s:%s:%s)' % (entry_datetime.year, entry_datetime.month,
-        #                                                    entry_datetime.day, entry_datetime.hour, entry_datetime.minute, entry_datetime.second)
 
         self.cursor.execute(
-            """INSERT INTO entry (id, title, company, summary, link, tags, location, published) VALUES (?,?,?,?,?,?,?,?)""",
-            (entry_id, entry_title, entry_company, entry_summary, entry_link, entry_tags, entry_location, entry_published))
+            """INSERT INTO entry (id, title, company, summary, link, tags, location, allows_remote, published) VALUES (?,?,?,?,?,?,?,?,?)""",
+            (entry_id, entry_title, entry_company, entry_summary, entry_link, entry_tags, entry_location, entry_allows_remote, entry_published))
+
+    def title_has_remote_option(self, title):
+        """
+        Determines whether the given title contains the option to work remotely.    
+
+        Args:
+            title (str): title string that may contain remote
+        """
+        REMOTE_OFFSET = -15  # This is the slice which will be (allows remote) or gibberishSE
+        return title[REMOTE_OFFSET:] == '(allows remote)'
 
     def connect_database(self, db):
         """
@@ -179,14 +190,12 @@ class RSSDatabase:
         Disconnects from a database and may commit changes.
 
         Args:
-            commit (bool, optional): Defaults to True. If true, commits all changes, else changes are ignore
+            commit (bool, optional): Defaults to True. If true, commits all changes, else changes are ignored
         """
 
         if commit:
             self.connection.commit()
-            self.connection.close()
-        else:
-            self.connection.close()
+        self.connection.close()
 
     def _dev_set_parser(self, parser):
         self.parser = parser
