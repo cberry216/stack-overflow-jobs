@@ -33,6 +33,10 @@ def main():
     rss_database.populate_database()
     print('Disconnecting Database...')
     rss_database.disconnect_database(commit=True)
+    print(f'\nDatabase is populated. To explore run \n\t\'$ sqlite3 {db_name}\'')
+    print('The only table in the database is:\n\t\'entry\'')
+    print('Attribute names for the entry table are:')
+    print('\tid | title | company | summary | link | tags | location | allows_remote | published | timestamp')
 
 
 if __name__ == '__main__':
