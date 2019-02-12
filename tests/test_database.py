@@ -1,11 +1,17 @@
 import pytest
 import sys
+import os
+import sqlite3
 sys.path.append('src')
+
+import RSSParser as rssp
+import RSSDatabase as rssd
+from exceptions import InvalidDatabaseException, InvalidParserException, DatabaseAlreadyExistsException
+
+global_parser = rssp.RSSParser('https://stackoverflow.com/jobs/feed')
 
 
 def test_rss_database_debug_mode():
-    import RSSDatabase as rssd
-
     db = rssd.RSSDatabase(_debug=True)
 
     assert db.parser is None
@@ -15,10 +21,6 @@ def test_rss_database_debug_mode():
 
 
 def test__dev_set_parser():
-    import RSSDatabase as rssd
-    import RSSParser as rssp
-    from exceptions import InvalidParserException, InvalidDatabaseException
-
     db = rssd.RSSDatabase(_debug=True)
 
     str_parser = 'this is not a parser'
@@ -36,10 +38,6 @@ def test__dev_set_parser():
 
 
 def test__dev_set_db():
-    import RSSDatabase as rssd
-    import RSSParser as rssp
-    from exceptions import InvalidParserException, InvalidDatabaseException
-
     db = rssd.RSSDatabase(_debug=True)
 
     str_parser = 'this is not a parser'
@@ -56,18 +54,12 @@ def test__dev_set_db():
 
 
 def test__is_valid_parser():
-    import RSSDatabase as rssd
-    import RSSParser as rssp
-
     db = rssd.RSSDatabase(_debug=True)
-
-    url = 'https://stackoverflow.com/jobs/feed'
-    parser = rssp.RSSParser(url)
 
     url2 = 'wont_work'
     parser2 = rssp.RSSParser(url2)
 
-    db._dev_set_parser(parser)
+    db._dev_set_parser(global_parser)
     assert db._is_valid_parser(db.parser)
 
     db._dev_set_parser(parser2)
@@ -75,8 +67,6 @@ def test__is_valid_parser():
 
 
 def test__is_valid_db():
-    import RSSDatabase as rssd
-
     db = rssd.RSSDatabase(_debug=True)
     db_name1 = 'db.sqlite'
     db_name2 = 'ajsdasjhgakjsdf.sqlite3'
@@ -97,18 +87,12 @@ def test__is_valid_db():
 
 
 def test__db_taken():
-    import RSSDatabase as rssd
-    import RSSParser as rssp
-    import os
-    from exceptions import DatabaseAlreadyExistsException
-
-    parser = rssp.RSSParser('https://stackoverflow.com/jobs/feed')
     db_name = 'test_db.sqlite'
-    db = rssd.RSSDatabase(parser=parser, db=db_name)
+    db = rssd.RSSDatabase(parser=global_parser, db=db_name)
     db.create_database()
 
     with pytest.raises(DatabaseAlreadyExistsException):
-        db2 = rssd.RSSDatabase(parser=parser, db=db_name)
+        db2 = rssd.RSSDatabase(parser=global_parser, db=db_name)
     db.disconnect_database()
 
     if os.path.isfile(db_name):
@@ -116,36 +100,25 @@ def test__db_taken():
 
 
 def test_rss_database():
-    import RSSDatabase as rssd
-    import RSSParser as rssp
-    from exceptions import InvalidParserException, InvalidDatabaseException
-
     with pytest.raises(InvalidParserException):
         db = rssd.RSSDatabase()
 
-    parser = rssp.RSSParser('https://stackoverflow.com/jobs/feed')
     with pytest.raises(InvalidDatabaseException):
-        db = rssd.RSSDatabase(parser)
+        db = rssd.RSSDatabase(global_parser)
 
     db_name2 = 'cool_database.sqlite'
-    db2 = rssd.RSSDatabase(parser=parser, db=db_name2)
+    db2 = rssd.RSSDatabase(parser=global_parser, db=db_name2)
 
-    assert db2.parser == parser
+    assert db2.parser == global_parser
     assert db2.db == db_name2
     assert db2.connection is None
     assert db2.cursor is None
 
 
 def test_create_database():
-    import RSSDatabase as rssd
-    import RSSParser as rssp
-    import sqlite3
-    import os
-
-    parser = rssp.RSSParser('https://stackoverflow.com/jobs/feed')
     db_name = 'entries.sqlite'
 
-    db = rssd.RSSDatabase(parser=parser, db=db_name)
+    db = rssd.RSSDatabase(parser=global_parser, db=db_name)
     db.create_database()
 
     assert os.path.isfile(db_name)
@@ -162,6 +135,7 @@ def test_create_database():
 
     os.remove(db_name)
     assert not os.path.isfile(db_name)
+
 
 
 def test_populate_database():
@@ -282,7 +256,6 @@ def test_populate_database():
 
 
 def test_title_has_remote_option():
-    import RSSDatabase as rssd
     db = rssd.RSSDatabase(_debug=True)
 
     has_remote = 'This text has a remote option (allows remote)'
@@ -293,10 +266,6 @@ def test_title_has_remote_option():
 
 
 def test_process_entry():
-    import RSSDatabase as rssd
-    import sqlite3
-    import os
-
     db_name = 'test_db.sqlite'
     db = rssd.RSSDatabase(_debug=True)
     db.connect_database(db_name)
@@ -414,10 +383,6 @@ def test_process_entry():
 
 
 def test_connect_database():
-    import RSSDatabase as rssd
-    from exceptions import InvalidDatabaseException
-    import os
-
     db_name = 'test_db.sqlite'
     db = rssd.RSSDatabase(_debug=True)
     db.connect_database(db_name)
@@ -442,10 +407,6 @@ def test_connect_database():
 
 
 def test_disconnect_database():
-    import RSSDatabase as rssd
-    from exceptions import InvalidDatabaseException
-    import os
-
     db_name = 'test_db.sqlite'
     db = rssd.RSSDatabase(_debug=True)
     db.connect_database(db_name)

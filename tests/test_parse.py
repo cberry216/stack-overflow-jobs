@@ -2,33 +2,28 @@ import pytest
 import sys
 sys.path.append('src')
 
+import RSSParser as rssp
+
+global_parser = rssp.RSSParser('https://stackoverflow.com/jobs/feed')
 
 def test_rss_parser_init():
-    import RSSParser as rssp
     parser = rssp.RSSParser('this_is_the_url')
 
     assert type(parser) == rssp.RSSParser
     assert parser.url == 'this_is_the_url'
 
 
-def test_parse_rss_feed():
-    import RSSParser as rssp
-    url = 'https://stackoverflow.com/jobs/feed'
-    parser = rssp.RSSParser(url)                  # parse_rss_feed() is automatically called when an RSSParser is initialized
-
-    assert parser.feed.status == 200
-    assert 'bozo_exception' not in parser.keys
-    assert type(parser.entries) == type([])
+def test_parse_rss_feed():               # parse_rss_feed() is automatically called when an RSSParser is initialized
+    assert global_parser.feed.status == 200
+    assert 'bozo_exception' not in global_parser.keys
+    assert type(global_parser.entries) == type([])
 
 
 def test_is_valid_parser():
-    import RSSParser as rssp
-    url1 = 'https://stackoverflow.com/jobs/feed'
-    parser = rssp.RSSParser(url1)
     url2 = 'thisurlwillnotwork'
     parser_fail = rssp.RSSParser(url2)
 
-    assert parser.is_valid_parser()
+    assert global_parser.is_valid_parser()
     assert not parser_fail.is_valid_parser()
 
 
