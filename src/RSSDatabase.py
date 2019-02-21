@@ -106,7 +106,8 @@ class RSSDatabase:
                 summary TEXT NOT NULL,
                 link TEXT NOT NULL,
                 tags TEXT,
-                location VARCHAR(256),
+                city VARCHAR(256),
+                state VARCHAR(256),
                 allows_remote INT NOT NULL,
                 published DATETIME NOT NULL,
                 timestamp DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -145,17 +146,20 @@ class RSSDatabase:
         else:
             entry_tags = None
         if 'location' in entry:
-            entry_location = entry['location']
+            entry_location_city_state = entry['location'].split(',')
+            entry_city = entry_location_city_state[0].strip()
+            entry_state = entry_location_city_state[1].strip()
         else:
-            entry_location = None
+            entry_city = None
+            entry_state = None
 
         entry_allows_remote = 1 if self.title_has_remote_option(entry_title) else 0
 
         entry_published = parser.parse(entry['published'])
 
         self.cursor.execute(
-            """INSERT INTO entry (id, title, company, summary, link, tags, location, allows_remote, published) VALUES (?,?,?,?,?,?,?,?,?)""",
-            (entry_id, entry_title, entry_company, entry_summary, entry_link, entry_tags, entry_location, entry_allows_remote, entry_published))
+            """INSERT INTO entry (id, title, company, summary, link, tags, city, state, allows_remote, published) VALUES (?,?,?,?,?,?,?,?,?,?)""",
+            (entry_id, entry_title, entry_company, entry_summary, entry_link, entry_tags, entry_city, entry_state, entry_allows_remote, entry_published))
 
     def title_has_remote_option(self, title):
         """
