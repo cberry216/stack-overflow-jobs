@@ -9,6 +9,7 @@ import RSSDatabase as rssd
 from exceptions import InvalidDatabaseException, InvalidParserException, DatabaseAlreadyExistsException
 
 global_parser = rssp.RSSParser('https://stackoverflow.com/jobs/feed')
+overwrite_parser = rssp.RSSParser('https://stackoverflow.com/jobs/feed')
 
 
 def test_rss_database_debug_mode():
@@ -40,12 +41,12 @@ def test__dev_set_parser():
 def test__dev_set_db():
     db = rssd.RSSDatabase(_debug=True)
 
-    str_parser = 'this is not a parser'
-    db._dev_set_db(str_parser)
-    assert db.db == str_parser
+    str_db = 'this is not a parser'
+    db._dev_set_db(str_db)
+    assert db.db == str_db
 
-    num_parser = 123456
-    db._dev_set_db(num_parser)
+    num_db = 123456
+    db._dev_set_db(num_db)
     assert db.db == 123456
 
     parser1 = rssp.RSSParser('')
@@ -139,15 +140,8 @@ def test_create_database():
 
 
 def test_populate_database():
-    import RSSDatabase as rssd
-    import RSSParser as rssp
-    import sqlite3
-    import os
-
-    parser = rssp.RSSParser('https://stackoverflow.com/jobs/feed')
-
     entries = [
-        {   # Both tags and location present
+        {   # Tags, location, and "(allows remote)"
             'id': 1,
             'title': 'job 1 (allows remote)',
             'author': 'company 1',
@@ -158,21 +152,24 @@ def test_populate_database():
                 {'term': 'term1-2'},
                 {'term': 'term1-3'}
             ],
-            'location': 'location 1',
+            'location': 'city 1, state 1',
             'published': 'Wed, 06 Feb 2019 12:36:40 Z',
-            'updated': '2019-02-06T12:36:40Z'
         },
-        {   # Location present, tags absent
+        {   # Tags and location present, "(allows remote)" absent
             'id': 2,
             'title': 'job 2',
             'author': 'company 2',
             'summary': 'summary 2',
             'link': 'link 2',
-            'location': 'location 2',
-            'published': 'Wed, 06 Feb 2019 12:36:40 Z',
-            'updated': '2019-02-06T12:36:40Z'
+            'tags': [
+                {'term': 'term2-1'},
+                {'term': 'term2-2'},
+                {'term': 'term2-3'}
+            ],
+            'location': 'city 2, state 2',
+            'published': 'Wed, 06 Feb 2019 12:36:42 Z',
         },
-        {   # Tags present, location absent
+        {   # Tags and "(allows remote)", location absent
             'id': 3,
             'title': 'job 3 (allows remote)',
             'author': 'company 3',
@@ -183,52 +180,91 @@ def test_populate_database():
                 {'term': 'term3-2'},
                 {'term': 'term3-3'}
             ],
-            'published': 'Wed, 06 Feb 2019 12:36:40 Z',
-            'updated': '2019-02-06T12:36:40Z'
+            'published': 'Wed, 06 Feb 2019 12:36:43 Z',
         },
-        {   # Both tags and location absent
+        {   # Tags present, "(allows remote)" and location absent
             'id': 4,
             'title': 'job 4',
             'author': 'company 4',
             'summary': 'summary 4',
             'link': 'link 4',
-            'published': 'Wed, 06 Feb 2019 12:36:40 Z',
-            'updated': '2019-02-06T12:36:40Z'
+            'tags': [
+                {'term': 'term4-1'},
+                {'term': 'term4-2'},
+                {'term': 'term4-3'}
+            ],
+            'published': 'Wed, 06 Feb 2019 12:36:44 Z',
+        },
+        {   # Location and "(allows remote)", tags absent
+            'id': 5,
+            'title': 'job 5 (allows remote)',
+            'author': 'company 5',
+            'summary': 'summary 5',
+            'link': 'link 5',
+            'location': 'city 5, state 5',
+            'published': 'Wed, 06 Feb 2019 12:36:45 Z',
+        },
+        {   # Location present, tags and "(allows remote)" absent
+            'id': 6,
+            'title': 'job 6',
+            'author': 'company 6',
+            'summary': 'summary 6',
+            'link': 'link 6',
+            'location': 'city 6, state 6',
+            'published': 'Wed, 06 Feb 2019 12:36:46 Z',
+        },
+        {   # (allows remote)" present, tags and location absent
+            'id': 7,
+            'title': 'job 7 (allows remote)',
+            'author': 'company 7',
+            'summary': 'summary 7',
+            'link': 'link 7',
+            'published': 'Wed, 06 Feb 2019 12:36:47 Z',
+        },
+        {   # Tags, location, and "(allows remote)" absent
+            'id': 8,
+            'title': 'job 8',
+            'author': 'company 8',
+            'summary': 'summary 8',
+            'link': 'link 8',
+            'published': 'Wed, 06 Feb 2019 12:36:48 Z',
         },
     ]
 
-    parser._dev_set_entries(entries)
+    overwrite_parser._dev_set_entries(entries)
 
     db_name = 'test_db.sqlite'
-    db = rssd.RSSDatabase(parser=parser, db=db_name)
+    db = rssd.RSSDatabase(parser=overwrite_parser, db=db_name)
     db.create_database()
 
     db.populate_database()
 
-    test_cursor = db.cursor.execute('SELECT * FROM entry WHERE id = 1')
-    test_results = test_cursor.fetchone()
+    test_query = db.cursor.execute('SELECT * FROM entry WHERE id = 1')
+    test_results = test_query.fetchone()
     assert test_results[0] == 1
     assert test_results[1] == 'job 1 (allows remote)'
     assert test_results[2] == 'company 1'
     assert test_results[3] == 'summary 1'
     assert test_results[4] == 'link 1'
     assert test_results[5] == 'term1-1,term1-2,term1-3,'
-    assert test_results[6] == 'location 1'
-    assert test_results[7] == 1
+    assert test_results[6] == 'city 1'
+    assert test_results[7] == 'state 1'
+    assert test_results[8] == 1
 
-    test_cursor = db.cursor.execute('SELECT * FROM entry WHERE id = 2')
-    test_results = test_cursor.fetchone()
+    test_query = db.cursor.execute('SELECT * FROM entry WHERE id = 2')
+    test_results = test_query.fetchone()
     assert test_results[0] == 2
     assert test_results[1] == 'job 2'
     assert test_results[2] == 'company 2'
     assert test_results[3] == 'summary 2'
     assert test_results[4] == 'link 2'
-    assert test_results[5] == None
-    assert test_results[6] == 'location 2'
-    assert test_results[7] == 0
+    assert test_results[5] == 'term2-1,term2-2,term2-3,'
+    assert test_results[6] == 'city 2'
+    assert test_results[7] == 'state 2'
+    assert test_results[8] == 0
 
-    test_cursor = db.cursor.execute('SELECT * FROM entry WHERE id = 3')
-    test_results = test_cursor.fetchone()
+    test_query = db.cursor.execute('SELECT * FROM entry WHERE id = 3')
+    test_results = test_query.fetchone()
     assert test_results[0] == 3
     assert test_results[1] == 'job 3 (allows remote)'
     assert test_results[2] == 'company 3'
@@ -236,18 +272,68 @@ def test_populate_database():
     assert test_results[4] == 'link 3'
     assert test_results[5] == 'term3-1,term3-2,term3-3,'
     assert test_results[6] == None
-    assert test_results[7] == 1
+    assert test_results[7] == None
+    assert test_results[8] == 1
 
-    test_cursor = db.cursor.execute('SELECT * FROM entry WHERE id = 4')
-    test_results = test_cursor.fetchone()
+    test_query = db.cursor.execute('SELECT * FROM entry WHERE id = 4')
+    test_results = test_query.fetchone()
     assert test_results[0] == 4
     assert test_results[1] == 'job 4'
     assert test_results[2] == 'company 4'
     assert test_results[3] == 'summary 4'
     assert test_results[4] == 'link 4'
+    assert test_results[5] == 'term4-1,term4-2,term4-3,'
+    assert test_results[6] == None
+    assert test_results[7] == None
+    assert test_results[8] == 0
+
+    test_query = db.cursor.execute('SELECT * FROM entry WHERE id = 5')
+    test_results = test_query.fetchone()
+    assert test_results[0] == 5
+    assert test_results[1] == 'job 5 (allows remote)'
+    assert test_results[2] == 'company 5'
+    assert test_results[3] == 'summary 5'
+    assert test_results[4] == 'link 5'
+    assert test_results[5] == None
+    assert test_results[6] == 'city 5'
+    assert test_results[7] == 'state 5'
+    assert test_results[8] == 1
+
+    test_query = db.cursor.execute('SELECT * FROM entry WHERE id = 6')
+    test_results = test_query.fetchone()
+    assert test_results[0] == 6
+    assert test_results[1] == 'job 6'
+    assert test_results[2] == 'company 6'
+    assert test_results[3] == 'summary 6'
+    assert test_results[4] == 'link 6'
+    assert test_results[5] == None
+    assert test_results[6] == 'city 6'
+    assert test_results[7] == 'state 6'
+    assert test_results[8] == 0
+
+    test_query = db.cursor.execute('SELECT * FROM entry WHERE id = 7')
+    test_results = test_query.fetchone()
+    assert test_results[0] == 7
+    assert test_results[1] == 'job 7 (allows remote)'
+    assert test_results[2] == 'company 7'
+    assert test_results[3] == 'summary 7'
+    assert test_results[4] == 'link 7'
     assert test_results[5] == None
     assert test_results[6] == None
-    assert test_results[7] == 0
+    assert test_results[7] == None
+    assert test_results[8] == 1
+
+    test_query = db.cursor.execute('SELECT * FROM entry WHERE id = 8')
+    test_results = test_query.fetchone()
+    assert test_results[0] == 8
+    assert test_results[1] == 'job 8'
+    assert test_results[2] == 'company 8'
+    assert test_results[3] == 'summary 8'
+    assert test_results[4] == 'link 8'
+    assert test_results[5] == None
+    assert test_results[6] == None
+    assert test_results[7] == None
+    assert test_results[8] == 0
 
     db.disconnect_database()
 
@@ -273,85 +359,129 @@ def test_process_entry():
     test_connection = db.connection
     test_cursor = db.cursor
 
-    entry1 = {   # Both tags and location present
-        'id': 1,
-        'title': 'job 1 (allows remote)',
-        'author': 'company 1',
-        'summary': 'summary 1',
-        'link': 'link 1',
-        'tags': [
+    entries = [
+        {   # Tags, location, and "(allows remote)"
+            'id': 1,
+            'title': 'job 1 (allows remote)',
+            'author': 'company 1',
+            'summary': 'summary 1',
+            'link': 'link 1',
+            'tags': [
                 {'term': 'term1-1'},
                 {'term': 'term1-2'},
                 {'term': 'term1-3'}
-        ],
-        'location': 'location 1',
-        'published': 'Wed, 06 Feb 2019 12:36:40 Z',
-        'updated': '2019-02-06T12:36:40Z'
-    }
-    entry2 = {   # Location present, tags absent
-        'id': 2,
-        'title': 'job 2',
-        'author': 'company 2',
-        'summary': 'summary 2',
-        'link': 'link 2',
-        'location': 'location 2',
-        'published': 'Wed, 06 Feb 2019 12:36:40 Z',
-        'updated': '2019-02-06T12:36:40Z'
-    }
-    entry3 = {   # Tags present, location absent
-        'id': 3,
-        'title': 'job 3 (allows remote)',
-        'author': 'company 3',
-        'summary': 'summary 3',
-        'link': 'link 3',
-        'tags': [
+            ],
+            'location': 'city 1, state 1',
+            'published': 'Wed, 06 Feb 2019 12:36:40 Z',
+        },
+        {   # Tags and location present, "(allows remote)" absent
+            'id': 2,
+            'title': 'job 2',
+            'author': 'company 2',
+            'summary': 'summary 2',
+            'link': 'link 2',
+            'tags': [
+                {'term': 'term2-1'},
+                {'term': 'term2-2'},
+                {'term': 'term2-3'}
+            ],
+            'location': 'city 2, state 2',
+            'published': 'Wed, 06 Feb 2019 12:36:42 Z',
+        },
+        {   # Tags and "(allows remote)", location absent
+            'id': 3,
+            'title': 'job 3 (allows remote)',
+            'author': 'company 3',
+            'summary': 'summary 3',
+            'link': 'link 3',
+            'tags': [
                 {'term': 'term3-1'},
                 {'term': 'term3-2'},
                 {'term': 'term3-3'}
-        ],
-        'published': 'Wed, 06 Feb 2019 12:36:40 Z',
-        'updated': '2019-02-06T12:36:40Z'
-    }
-    entry4 = {   # Both tags and location absent
-        'id': 4,
-        'title': 'job 4',
-        'author': 'company 4',
-        'summary': 'summary 4',
-        'link': 'link 4',
-        'published': 'Wed, 06 Feb 2019 12:36:40 Z',
-        'updated': '2019-02-06T12:36:40Z'
-    }
+            ],
+            'published': 'Wed, 06 Feb 2019 12:36:43 Z',
+        },
+        {   # Tags present, "(allows remote)" and location absent
+            'id': 4,
+            'title': 'job 4',
+            'author': 'company 4',
+            'summary': 'summary 4',
+            'link': 'link 4',
+            'tags': [
+                {'term': 'term4-1'},
+                {'term': 'term4-2'},
+                {'term': 'term4-3'}
+            ],
+            'published': 'Wed, 06 Feb 2019 12:36:44 Z',
+        },
+        {   # Location and "(allows remote)", tags absent
+            'id': 5,
+            'title': 'job 5 (allows remote)',
+            'author': 'company 5',
+            'summary': 'summary 5',
+            'link': 'link 5',
+            'location': 'city 5, state 5',
+            'published': 'Wed, 06 Feb 2019 12:36:45 Z',
+        },
+        {   # Location present, tags and "(allows remote)" absent
+            'id': 6,
+            'title': 'job 6',
+            'author': 'company 6',
+            'summary': 'summary 6',
+            'link': 'link 6',
+            'location': 'city 6, state 6',
+            'published': 'Wed, 06 Feb 2019 12:36:46 Z',
+        },
+        {   # (allows remote)" present, tags and location absent
+            'id': 7,
+            'title': 'job 7 (allows remote)',
+            'author': 'company 7',
+            'summary': 'summary 7',
+            'link': 'link 7',
+            'published': 'Wed, 06 Feb 2019 12:36:47 Z',
+        },
+        {   # Tags, location, and "(allows remote)" absent
+            'id': 8,
+            'title': 'job 8',
+            'author': 'company 8',
+            'summary': 'summary 8',
+            'link': 'link 8',
+            'published': 'Wed, 06 Feb 2019 12:36:48 Z',
+        },
+    ]
 
-    db.process_entry(entry1)
+    db.process_entry(entries[0])
     db.connection.commit()
-    test_cursor = db.cursor.execute('SELECT * FROM entry WHERE id = 1')
-    test_results = test_cursor.fetchone()
+    test_query = db.cursor.execute('SELECT * FROM entry WHERE id = 1')
+    test_results = test_query.fetchone()
     assert test_results[0] == 1
     assert test_results[1] == 'job 1 (allows remote)'
     assert test_results[2] == 'company 1'
     assert test_results[3] == 'summary 1'
     assert test_results[4] == 'link 1'
     assert test_results[5] == 'term1-1,term1-2,term1-3,'
-    assert test_results[6] == 'location 1'
-    assert test_results[7] == 1
+    assert test_results[6] == 'city 1'
+    assert test_results[7] == 'state 1'
+    assert test_results[8] == 1
 
-    db.process_entry(entry2)
+    db.process_entry(entries[1])
     db.connection.commit()
-    test_cursor = db.cursor.execute('SELECT * FROM entry WHERE id = 2')
-    test_results = test_cursor.fetchone()
+    test_query = db.cursor.execute('SELECT * FROM entry WHERE id = 2')
+    test_results = test_query.fetchone()
     assert test_results[0] == 2
     assert test_results[1] == 'job 2'
     assert test_results[2] == 'company 2'
     assert test_results[3] == 'summary 2'
     assert test_results[4] == 'link 2'
-    assert test_results[5] == None
-    assert test_results[6] == 'location 2'
-    assert test_results[7] == 0
+    assert test_results[5] == 'term2-1,term2-2,term2-3,'
+    assert test_results[6] == 'city 2'
+    assert test_results[7] == 'state 2'
+    assert test_results[8] == 0
 
-    db.process_entry(entry3)
+    db.process_entry(entries[2])
     db.connection.commit()
-    test_cursor = db.cursor.execute('SELECT * FROM entry WHERE id = 3')
-    test_results = test_cursor.fetchone()
+    test_query = db.cursor.execute('SELECT * FROM entry WHERE id = 3')
+    test_results = test_query.fetchone()
     assert test_results[0] == 3
     assert test_results[1] == 'job 3 (allows remote)'
     assert test_results[2] == 'company 3'
@@ -359,20 +489,78 @@ def test_process_entry():
     assert test_results[4] == 'link 3'
     assert test_results[5] == 'term3-1,term3-2,term3-3,'
     assert test_results[6] == None
-    assert test_results[7] == 1
+    assert test_results[7] == None
+    assert test_results[8] == 1
 
-    db.process_entry(entry4)
+    db.process_entry(entries[3])
     db.connection.commit()
-    test_cursor = db.cursor.execute('SELECT * FROM entry WHERE id = 4')
-    test_results = test_cursor.fetchone()
+    test_query = db.cursor.execute('SELECT * FROM entry WHERE id = 4')
+    test_results = test_query.fetchone()
     assert test_results[0] == 4
     assert test_results[1] == 'job 4'
     assert test_results[2] == 'company 4'
     assert test_results[3] == 'summary 4'
     assert test_results[4] == 'link 4'
+    assert test_results[5] == 'term4-1,term4-2,term4-3,'
+    assert test_results[6] == None
+    assert test_results[7] == None
+    assert test_results[8] == 0
+
+    db.process_entry(entries[4])
+    db.connection.commit()
+    test_query = db.cursor.execute('SELECT * FROM entry WHERE id = 5')
+    test_results = test_query.fetchone()
+    assert test_results[0] == 5
+    assert test_results[1] == 'job 5 (allows remote)'
+    assert test_results[2] == 'company 5'
+    assert test_results[3] == 'summary 5'
+    assert test_results[4] == 'link 5'
+    assert test_results[5] == None
+    assert test_results[6] == 'city 5'
+    assert test_results[7] == 'state 5'
+    assert test_results[8] == 1
+
+    db.process_entry(entries[5])
+    db.connection.commit()
+    test_query = db.cursor.execute('SELECT * FROM entry WHERE id = 6')
+    test_results = test_query.fetchone()
+    assert test_results[0] == 6
+    assert test_results[1] == 'job 6'
+    assert test_results[2] == 'company 6'
+    assert test_results[3] == 'summary 6'
+    assert test_results[4] == 'link 6'
+    assert test_results[5] == None
+    assert test_results[6] == 'city 6'
+    assert test_results[7] == 'state 6'
+    assert test_results[8] == 0
+
+    db.process_entry(entries[6])
+    db.connection.commit()
+    test_query = db.cursor.execute('SELECT * FROM entry WHERE id = 7')
+    test_results = test_query.fetchone()
+    assert test_results[0] == 7
+    assert test_results[1] == 'job 7 (allows remote)'
+    assert test_results[2] == 'company 7'
+    assert test_results[3] == 'summary 7'
+    assert test_results[4] == 'link 7'
     assert test_results[5] == None
     assert test_results[6] == None
-    assert test_results[7] == 0
+    assert test_results[7] == None
+    assert test_results[8] == 1
+
+    db.process_entry(entries[7])
+    db.connection.commit()
+    test_query = db.cursor.execute('SELECT * FROM entry WHERE id = 8')
+    test_results = test_query.fetchone()
+    assert test_results[0] == 8
+    assert test_results[1] == 'job 8'
+    assert test_results[2] == 'company 8'
+    assert test_results[3] == 'summary 8'
+    assert test_results[4] == 'link 8'
+    assert test_results[5] == None
+    assert test_results[6] == None
+    assert test_results[7] == None
+    assert test_results[8] == 0
 
     db.disconnect_database()
 
