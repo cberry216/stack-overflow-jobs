@@ -1,13 +1,21 @@
 import tkinter as tk
+from html2text import html2text
 from tkinter import scrolledtext as st
 from random import randint
+from db_interface import DBInterface
 
-ID_INDEX=0
-TITLE_INDEX=1
-COMPANY_INDEX=2
-STATE_INDEX=7
-CITY_INDEX=6
-PUBLISHED_INDEX=9
+ID_INDEX = 0
+TITLE_INDEX = 1
+COMPANY_INDEX = 2
+SUMMARY_INDEX = 3
+LINK_INDEX = 4
+TAGS_INDEX=5
+STATE_INDEX = 7
+CITY_INDEX = 6
+REMOTE_INDEX = 8
+PUBLISHED_INDEX = 9
+
+DB_NAME = 'db.sqlite'
 
 
 class GUIDriver(tk.Frame):
@@ -18,7 +26,9 @@ class GUIDriver(tk.Frame):
         self.window_width = width
         self.window_height = height
         self.frames = self.build_layout()
-        self.entry_list = []
+        self.interface = DBInterface(DB_NAME)
+        self.entries_initialized = False
+        self.entry_list = self.interface.get_all_entries()
         self.parameter_fields = {
             'location_null': tk.BooleanVar(),
             'state': tk.StringVar(),
@@ -29,29 +39,24 @@ class GUIDriver(tk.Frame):
             'remote': tk.BooleanVar(),
             'results': tk.StringVar()
         }
-        self.location_include_nulls = tk.BooleanVar()
-        self.allows_remote = tk.BooleanVar()
-        self.and_or_results = tk.StringVar()
-        self.entryScrolledText = st.ScrolledText(self.frames['jobsFrame'])
-        self.entryScrolledText.config(width=self.frames['jobsFrame']['width'])
+        self.current_info_dict = {}
+        self.sort_order = {
+            'id': 'ASC',
+            'title': 'ASC',
+            'company': 'ASC',
+            'state': 'ASC',
+            'published': 'ASC'
+        }
+        # self.entryScrolledText = st.ScrolledText(self.frames['jobsFrame'])
+        # self.entryScrolledText.config(width=self.frames['jobsFrame']['width'])
+        # self.entryScrolledText.grid(row=0, column=0)
+        self.entryScrolledText = tk.Text(
+            self.frames['jobsFrame'],
+            width=self.frames['jobsFrame']['width']    
+        )
         self.entryScrolledText.grid(row=0, column=0)
-
-        # TODO: Remove this
-        for i in range(100):
-            self.entry_list.append(
-                (
-                    i,
-                    'title ' + str(randint(100000,999999)),
-                    'company ' + str(randint(100000, 999999)),
-                    0,
-                    0,
-                    0,
-                    'city ' + str(randint(100000, 999999)),
-                    'state ' + str(randint(100000, 999999)),
-                    0,
-                    'published ' + str(randint(100000, 999999))
-                )
-            )
+        self.entryScrollbar = tk.Scrollbar(self.frames['jobsFrame'])
+        self.entryScrollbar.grid(row=0, column=1)
 
         self.add_frame_components()
 
@@ -62,13 +67,13 @@ class GUIDriver(tk.Frame):
         entry_frame_width = filter_frame_width
         entry_frame_height = self.window_height - filter_frame_height
 
-        info_frame_width = self.window_width - filter_frame_width
-        info_frame_height = self.window_height
+        right_frame_width = self.window_width - filter_frame_width
+        right_frame_height = self.window_height
 
         database_frame_width = int(0.1 * self.window_width)
         database_frame_height = filter_frame_height
 
-        parameter_frame_width = self.window_width - info_frame_width - database_frame_width
+        parameter_frame_width = self.window_width - right_frame_width - database_frame_width
         parameter_frame_height = filter_frame_height
 
         order_frame_width = entry_frame_width
@@ -93,13 +98,20 @@ class GUIDriver(tk.Frame):
         )
         entryFrame.grid(row=1, column=0)
 
-        infoFrame = tk.Frame(
+        rightFrame = tk.Frame(
             self,
-            width=info_frame_width,
-            height=info_frame_height
+            width=right_frame_width,
+            height=right_frame_height
         )
-        infoFrame.config(background='blue')
-        infoFrame.grid(row=0, column=1, rowspan=2)
+        rightFrame.grid(row=0, column=1, rowspan=2)
+
+        infoFrame = tk.Frame(
+            rightFrame,
+            width=right_frame_width,
+            height=right_frame_height
+        )
+        infoFrame.grid(row=0, column=0)
+        infoFrame.grid_propagate(False)
         frame_reference['infoFrame'] = infoFrame
 
         databaseFrame = tk.Frame(
@@ -146,56 +158,27 @@ class GUIDriver(tk.Frame):
         orderFrame.grid(row=0, column=0)
         orderFrame.grid_propagate(False)
         orderFrame.grid_columnconfigure(0, weight=1)
-        orderFrame.grid_columnconfigure(1, weight=1)
-        orderFrame.grid_columnconfigure(2, weight=1)
+        orderFrame.grid_columnconfigure(1, weight=4)
+        orderFrame.grid_columnconfigure(2, weight=2)
         orderFrame.grid_columnconfigure(3, weight=1)
-        orderFrame.grid_columnconfigure(4, weight=1)
-        orderFrame.grid_columnconfigure(5, weight=1)
+        orderFrame.grid_columnconfigure(4, weight=2)
+        orderFrame.grid_columnconfigure(5, weight=2)
         orderFrame.grid_rowconfigure(0, weight=1)
         frame_reference['orderFrame'] = orderFrame
-
-        # jobsCanvas = tk.Canvas(
-        #     entryFrame,
-        #     width=jobs_frame_width,
-        #     height=jobs_frame_height
-        # )
-        # jobsCanvas.config(background='steelblue')
-        # jobsCanvas.grid(row=1, column=0)
-        # jobsCanvas.grid_propagate(False)
-        # jobsCanvas.grid_columnconfigure(0, weight=1)
-        # jobsCanvas.grid_columnconfigure(1, weight=1)
-        # jobsCanvas.grid_columnconfigure(2, weight=1)
-        # jobsCanvas.grid_columnconfigure(3, weight=1)
-        # jobsCanvas.grid_columnconfigure(4, weight=1)
-        # frame_reference['jobsCanvas'] = jobsCanvas
-
-        # jobsScrollbar = tk.Scrollbar(
-        #     entryFrame,
-        #     command=jobsCanvas.yview
-        # )
-        # jobsScrollbar.config(background="maroon")
-        # jobsScrollbar.grid(row=0, column=1, rowspan=2)
-
-        # jobsCanvas.configure(yscrollcommand=jobsScrollbar.set)
-        # # jobsCanvas.bind('<Configure>', self.on_configure)
 
         jobsFrame = tk.Frame(
             entryFrame,
             width=jobs_frame_width,
             height=jobs_frame_height,
         )
-        jobsFrame.config(background='cyan')
         jobsFrame.grid(row=1, column=0)
         jobsFrame.grid_propagate(False)
-        # jobsFrame.grid_columnconfigure(0, weight=1)
-        # jobsFrame.grid_columnconfigure(1, weight=1)
-        # jobsFrame.grid_columnconfigure(2, weight=1)
-        # jobsFrame.grid_columnconfigure(3, weight=1)
-        # jobsFrame.grid_columnconfigure(4, weight=1)
+        jobsFrame.grid_columnconfigure(0, weight=9)
+        jobsFrame.grid_columnconfigure(1, weight=1)
         frame_reference['jobsFrame'] = jobsFrame
 
         return frame_reference
-    
+
     def add_frame_components(self):
         self.add_parameter_fields()
         self.add_database_label()
@@ -203,6 +186,7 @@ class GUIDriver(tk.Frame):
         self.add_purge_database_button()
         self.add_concat_database_button()
         self.add_entries_label()
+        self.add_single_launch_components()
 
     def add_parameter_fields(self):
         using_frame = self.frames['parameterFrame']
@@ -308,7 +292,7 @@ class GUIDriver(tk.Frame):
 
         remoteRadioNotAllow = tk.Radiobutton(
             using_frame,
-            text="No Remote",
+            text="No Preference",
             variable=self.parameter_fields['remote'],
             value=False,
             indicatoron=0
@@ -344,18 +328,39 @@ class GUIDriver(tk.Frame):
             text="Filter",
             command=self.filter_results
         )
-        submitButton.grid(row=4, column=0, columnspan=6, sticky="NEWS")
+        submitButton.grid(row=4, column=0, columnspan=5, sticky="NEWS")
+
+        clearButton = tk.Button(
+            using_frame,
+            text="Clear",
+            command=self.clear_filters
+        )
+        clearButton.grid(row=4, column=5, sticky="NEWS")
 
     def filter_results(self):
-        print('Location Null: ' + str(self.parameter_fields['location_null'].get()))
-        print('State: ' + str(self.parameter_fields['state'].get()))
-        print('City: ' + str(self.parameter_fields['city'].get()))
-        print('Tags: ' + str(self.parameter_fields['tags'].get()))
-        print('Title: ' + str(self.parameter_fields['title'].get()))
-        print('Company: ' + str(self.parameter_fields['company'].get()))
-        print('Remote: ' + str(self.parameter_fields['remote'].get()))
-        print('Results: ' + str(self.parameter_fields['results'].get()))
+        if self.entries_initialized:
+            filter_dict = {}
+            filter_dict['location'] = self.parameter_fields['location_null'].get()
+            filter_dict['state'] = self.parameter_fields['state'].get()
+            filter_dict['city'] = self.parameter_fields['city'].get()
+            filter_dict['tags'] = self.parameter_fields['tags'].get()
+            filter_dict['title'] = self.parameter_fields['title'].get()
+            filter_dict['company'] = self.parameter_fields['company'].get()
+            filter_dict['remote'] = self.parameter_fields['remote'].get()
 
+            and_results = True if self.parameter_fields['results'].get() == "AND" else False
+            self.interface.filter_entries(filter_dict, and_results)
+            self.entry_list = self.interface.all_entries
+            self.write_entries_to_text()
+        else:
+            print('Database entries not initialized')
+
+    def clear_filters(self):
+        self.parameter_fields['state'].set('')
+        self.parameter_fields['city'].set('')
+        self.parameter_fields['tags'].set('')
+        self.parameter_fields['title'].set('')
+        self.parameter_fields['company'].set('')
 
     def add_database_label(self):
         using_frame = self.frames['databaseFrame']
@@ -437,19 +442,228 @@ class GUIDriver(tk.Frame):
         )
         publishedButton.grid(row=0, column=5, sticky="NEWS")
 
+    def add_single_launch_components(self):
+        using_frame = self.frames['infoFrame']
+        selectFrame = tk.Frame(
+            using_frame,
+            width=using_frame['width']
+        )
+        selectFrame.grid(row=0, column=0)
+
+        selectIdLabel = tk.Label(
+            selectFrame,
+            text="Enter ID Of Job: "
+        )
+        selectIdLabel.grid(row=0, column=0)
+
+        selectIdEntry = tk.Entry(
+            selectFrame
+        )
+        selectIdEntry.grid(row=0, column=1)
+        self.current_info_dict['id'] = selectIdEntry
+
+        selectIdButton = tk.Button(
+            selectFrame,
+            text="Get Info",
+            command=self.get_single_job_info
+        )
+        selectIdButton.grid(row=0, column=2)
+
+        titleFrame = tk.Frame(
+            using_frame,
+            # width=using_frame
+        )
+        titleFrame.grid_columnconfigure(0, weight=1)
+        titleFrame.grid_columnconfigure(1, weight=3)
+        titleFrame.grid(row=1, column=0)
+
+        titleLabel = tk.Label(
+            titleFrame,
+            text="Title: "
+        )
+        titleLabel.grid(row=0, column=0)
+
+        titleEntry = tk.Entry(
+            titleFrame
+        )
+        titleEntry.grid(row=0, column=1)
+        self.current_info_dict['title'] = titleEntry
+
+        companyFrame = tk.Frame(
+            using_frame,
+        )
+        companyFrame.grid_columnconfigure(0, weight=1)
+        companyFrame.grid_columnconfigure(1, weight=3)
+        companyFrame.grid(row=2, column=0)
+
+        companyLabel = tk.Label(
+            companyFrame,
+            text="Company: "
+        )
+        companyLabel.grid(row=0, column=0)
+
+        companyEntry = tk.Entry(
+            companyFrame
+        )
+        companyEntry.grid(row=0, column=1)
+        self.current_info_dict['company'] = companyEntry
+
+        linkFrame = tk.Frame(
+            using_frame
+        )
+        linkFrame.grid_columnconfigure(0, weight=1)
+        linkFrame.grid_columnconfigure(1, weight=2)
+        linkFrame.grid(row=3, column=0)
+
+        linkLabel = tk.Label(
+            linkFrame,
+            text="Link: "
+        )
+        linkLabel.grid(row=0, column=0)
+
+        linkEntry = tk.Entry(
+            linkFrame
+        )
+        linkEntry.grid(row=0, column=1)
+        self.current_info_dict['link'] = linkEntry
+
+        tagsFrame = tk.Frame(
+            using_frame
+        )
+        tagsFrame.grid_columnconfigure(0, weight=1)
+        tagsFrame.grid_columnconfigure(1, weight=2)
+        tagsFrame.grid(row=4, column=0)
+
+        tagsLabel = tk.Label(
+            tagsFrame,
+            text="Tags: "
+        )
+        tagsLabel.grid(row=0, column=0)
+
+        tagsEntry = tk.Entry(
+            tagsFrame
+        )
+        tagsEntry.grid(row=0, column=1)
+        self.current_info_dict['tags'] = tagsEntry
+
+        stateFrame = tk.Frame(
+            using_frame
+        )
+        stateFrame.grid_columnconfigure(0, weight=1)
+        stateFrame.grid_columnconfigure(1, weight=2)
+        stateFrame.grid(row=5, column=0)
+
+        stateLabel = tk.Label(
+            stateFrame,
+            text="State: "
+        )
+        stateLabel.grid(row=0, column=0)
+
+        stateEntry = tk.Entry(
+            stateFrame
+        )
+        stateEntry.grid(row=0, column=1)
+        self.current_info_dict['state'] = stateEntry
+
+        cityFrame = tk.Frame(
+            using_frame
+        )
+        cityFrame.grid_columnconfigure(0, weight=1)
+        cityFrame.grid_columnconfigure(1, weight=2)
+        cityFrame.grid(row=6, column=0)
+
+        cityLabel = tk.Label(
+            cityFrame,
+            text="City: "
+        )
+        cityLabel.grid(row=0, column=0)
+
+        cityEntry = tk.Entry(
+            cityFrame
+        )
+        cityEntry.grid(row=0, column=1)
+        self.current_info_dict['city'] = cityEntry
+
+        remoteFrame = tk.Frame(
+            using_frame
+        )
+        remoteFrame.grid_columnconfigure(0, weight=1)
+        remoteFrame.grid_columnconfigure(1, weight=2)
+        remoteFrame.grid(row=7, column=0)
+
+        remoteLabel = tk.Label(
+            remoteFrame,
+            text="Allows Remote: "
+        )
+        remoteLabel.grid(row=0, column=0)
+
+        remoteEntry = tk.Entry(
+            remoteFrame
+        )
+        remoteEntry.grid(row=0, column=1)
+        self.current_info_dict['remote'] = remoteEntry
+
+        summaryLabel = tk.Label(
+            using_frame,
+            text="Summary: "
+        )
+        summaryLabel.grid(row=8, column=0)
+
+        summaryFrame = tk.Frame(
+            using_frame,
+        )
+        summaryFrame.grid(row=9, column=0, columnspan=3)
+
+        summaryText = tk.Text(
+            summaryFrame,
+            wrap=tk.WORD,
+            width=64,
+            height=34
+        )
+        summaryText.grid(row=0, column=0, stick="NEWS")
+        summaryText.config(background="#eeeeee")
+        self.current_info_dict['summary'] = summaryText
+
+
+
+    def get_single_job_info(self):
+        entry_id = self.current_info_dict['id'].get()
+        current_entry = self.interface.get_single_entry(int(entry_id))
+        self.current_info_dict['title'].delete(0, tk.END)
+        self.current_info_dict['title'].insert(tk.END, current_entry[TITLE_INDEX])
+        self.current_info_dict['company'].delete(0, tk.END)
+        self.current_info_dict['company'].insert(tk.END, current_entry[COMPANY_INDEX])
+        self.current_info_dict['link'].delete(0, tk.END)
+        self.current_info_dict['link'].insert(tk.END, current_entry[LINK_INDEX])
+        self.current_info_dict['tags'].delete(0, tk.END)
+        self.current_info_dict['tags'].insert(tk.END, current_entry[TAGS_INDEX])
+        self.current_info_dict['state'].delete(0, tk.END)
+        self.current_info_dict['state'].insert(tk.END, current_entry[STATE_INDEX] if current_entry[STATE_INDEX] is not None else 'None')
+        self.current_info_dict['city'].delete(0, tk.END)
+        self.current_info_dict['city'].insert(tk.END, current_entry[CITY_INDEX] if current_entry[CITY_INDEX] is not None else 'None')
+        self.current_info_dict['remote'].delete(0, tk.END)
+        self.current_info_dict['remote'].insert(tk.END, "YES" if current_entry[REMOTE_INDEX] == 1 else "NO")
+        self.current_info_dict['summary'].delete('1.0', tk.END)
+        self.current_info_dict['summary'].insert(tk.END, html2text(current_entry[SUMMARY_INDEX]))
 
 
     def init_offline_database(self):
-        print('Offline Working')
-        self.write_entries_to_text()
+        if not self.entries_initialized:
+            print('Offline Working')
+            self.write_entries_to_text()
+            self.entries_initialized = True
 
     def init_purge_database(self):
-        print('Purge Working')
-        # self.write_reverse_entries_to_text()
-        self.delete_entries()
+        if not self.entries_initialized:
+            print('Purge Working')
+            self.write_entries_to_text()
+            self.entries_initialized = True
 
     def init_concat_database(self):
-        print('Concat Working')
+        if not self.entries_initialized:
+            print('Concat Working')
+            self.write_entries_to_text()
+            self.entries_initialized = True
 
     def write_entries_to_text(self):
         self.entryScrolledText.config(state=tk.NORMAL)
@@ -459,85 +673,78 @@ class GUIDriver(tk.Frame):
         self.entryScrolledText.config(state=tk.DISABLED)
 
     def write_single_entry_to_text(self, entry, row):
-        # using_frame = self.frames['jobsCanvas']
-
-        entry_id = self.format_to_length(str(entry[ID_INDEX]), 19)
-        entry_title = self.format_to_length(str(entry[TITLE_INDEX]), 22)
-        entry_company = self.format_to_length(str(entry[COMPANY_INDEX]), 27)
-        entry_state = self.format_to_length(str(entry[STATE_INDEX]), 22)
+        entry_id = self.format_to_length(str(entry[ID_INDEX]), 11)
+        entry_title = self.format_to_length(str(entry[TITLE_INDEX]), 38)
+        entry_company = self.format_to_length(str(entry[COMPANY_INDEX]), 26)
+        entry_state = self.format_to_length(str(entry[STATE_INDEX]), 14)
         entry_city = self.format_to_length(str(entry[CITY_INDEX]), 21)
         entry_published = self.format_to_length(str(entry[PUBLISHED_INDEX]), 24)
 
-        self.entryScrolledText.insert(tk.END, f'{entry_id}{entry_title}{entry_company}{entry_state}{entry_city}{entry_published}\n')
-
-        # titleText = tk.Text(
-        #     using_frame,
-        #     height=1
-        # )
-        # titleText.grid(row=row, column=TITLE_COLUMN)
-        # titleText.insert(tk.END, entry_title)
-        # titleText.config(state=tk.DISABLED)
-
-        # companyText = tk.Text(
-        #     using_frame,
-        #     height=1
-        # )
-        # companyText.grid(row=row, column=COMPANY_COLUMN)
-        # companyText.insert(tk.END, entry_company)
-        # companyText.config(state=tk.DISABLED)
-
-        # stateText = tk.Text(
-        #     using_frame,
-        #     height=1
-        # )
-        # stateText.grid(row=row, column=STATE_COLUMN)
-        # stateText.insert(tk.END, entry_state)
-        # stateText.config(state=tk.DISABLED)
-
-        # cityText = tk.Text(
-        #     using_frame,
-        #     height=1
-        # )
-        # cityText.grid(row=row, column=CITY_COLUMN)
-        # cityText.insert(tk.END, entry_city)
-        # cityText.config(state=tk.DISABLED)
-
-        # publishedText = tk.Text(
-        #     using_frame,
-        #     height=1
-        # )
-        # publishedText.grid(row=row, column=PUBLISHED_COLUMN)
-        # publishedText.insert(tk.END, entry_published)
-        # publishedText.config(state=tk.DISABLED)
+        self.entryScrolledText.insert(
+            tk.END, f'{entry_id}{entry_title}{entry_company}{entry_state}{entry_city}{entry_published}\n')
 
     def format_to_length(self, attribute, length):
         if len(attribute) > length:
-            return attribute[:length-3] + '...'
+            return attribute[:length-4] + '... '
         else:
             return attribute + ' ' * (length - len(attribute))
 
     def sort_entries_by_id(self):
-        print('Sorting by id')
+        print('Sorting by id: ', end='')
         self.entry_list.sort(key=lambda x: x[ID_INDEX])
+        if self.sort_order['id'] == 'ASC':
+            self.sort_order['id'] = 'DESC'
+            print('Ascending')
+        else:
+            self.sort_order['id'] = 'ASC'
+            self.entry_list = list(reversed(self.entry_list))
+            print('Descending')
         self.write_entries_to_text()
 
     def sort_entries_by_title(self):
-        print('Sorting by title')
+        print('Sorting by title: ', end='')
         self.entry_list.sort(key=lambda x: x[TITLE_INDEX])
+        if self.sort_order['title'] == 'ASC':
+            self.sort_order['title'] = 'DESC'
+            print('Ascending')
+        else:
+            self.sort_order['title'] = 'ASC'
+            self.entry_list = list(reversed(self.entry_list))
+            print('Descending')
         self.write_entries_to_text()
 
     def sort_entries_by_company(self):
-        print('Sorting by company')
+        print('Sorting by company: ', end='')
         self.entry_list.sort(key=lambda x: x[COMPANY_INDEX])
+        if self.sort_order['company'] == 'ASC':
+            self.sort_order['company'] = 'DESC'
+            print('Ascending')
+        else:
+            self.sort_order['company'] = 'ASC'
+            self.entry_list = list(reversed(self.entry_list))
+            print('Descending')
         self.write_entries_to_text()
 
     def sort_entries_by_state(self):
-        print('Sorting by state')
-        self.entry_list.sort(key=lambda x: x[STATE_INDEX])
+        print('Sorting by state: ', end='')
+        self.entry_list.sort(key=lambda x: x[STATE_INDEX] if x[STATE_INDEX] is not None else '-')
+        if self.sort_order['state'] == 'ASC':
+            self.sort_order['state'] = 'DESC'
+            print('Ascending')
+        else:
+            self.sort_order['state'] = 'ASC'
+            self.entry_list = list(reversed(self.entry_list))
+            print('Descending')
         self.write_entries_to_text()
 
     def sort_entries_by_published(self):
-        print('Sorting by published')
+        print('Sorting by published: ', end='')
         self.entry_list.sort(key=lambda x: x[PUBLISHED_INDEX])
+        if self.sort_order['published'] == 'ASC':
+            self.sort_order['published'] = 'DESC'
+            print('Ascending')
+        else:
+            self.sort_order['published'] = 'ASC'
+            self.entry_list = list(reversed(self.entry_list))
+            print('Descending')
         self.write_entries_to_text()
-

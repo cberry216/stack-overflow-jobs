@@ -9,6 +9,7 @@ verify_ssl = true
 feedparser = "*"
 python-dateutil = "*"
 pytest = "*"
+html2text = "*"
 
 [requires]
 python_version = "3.7"

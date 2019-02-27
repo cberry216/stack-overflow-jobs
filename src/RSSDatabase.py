@@ -147,8 +147,12 @@ class RSSDatabase:
             entry_tags = None
         if 'location' in entry:
             entry_location_city_state = entry['location'].split(',')
-            entry_city = entry_location_city_state[0].strip()
-            entry_state = entry_location_city_state[1].strip()
+            if len(entry_location_city_state) == 2:
+                entry_city = entry_location_city_state[0].strip()
+                entry_state = entry_location_city_state[1].strip()
+            else:
+                entry_city = None
+                entry_state = None
         else:
             entry_city = None
             entry_state = None
